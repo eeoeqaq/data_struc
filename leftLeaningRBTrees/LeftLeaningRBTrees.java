@@ -1,13 +1,11 @@
 package leftLeaningRBTrees;
 
-import java.security.cert.TrustAnchor;
 import java.util.Objects;
-
-import static java.awt.Color.red;
 
 /**
  * LLRBTrees, 是一种与2-3-trees双射的数据结构，因此有自平衡属性
  * 与基础BST的实现十分类似
+ * @author eeoe
  * */
 public class LeftLeaningRBTrees<T extends Comparable<T>> {
 
@@ -16,12 +14,21 @@ public class LeftLeaningRBTrees<T extends Comparable<T>> {
         black
     }
 
-    private static class node<T>{
+    private void changeColor(node x) {
+        if (x != null) {
+            if (x.colorTowardsParent == color.red) {
+                x.colorTowardsParent = color.black;
+            } else {
+                x.colorTowardsParent = color.red;
+            }
+        }
+    }
+    private class node{
         T a;
         /*如何在node中表示node之间分支的红与黑？  考虑用该分支近叶的节点的成员变量表示*/
         color colorTowardsParent;
-        node<T> left;
-        node<T> right;
+        node left;
+        node right;
 
         node(T a) {
             this.a = a;
@@ -30,7 +37,7 @@ public class LeftLeaningRBTrees<T extends Comparable<T>> {
         }
     }
     /*member variables*/
-    node<T> root;
+    node root;
     int size;
 
     /*member functions*/
@@ -47,13 +54,20 @@ public class LeftLeaningRBTrees<T extends Comparable<T>> {
         root = insertRecur(x, root, haveSameNum);
         if (!haveSameNum[0]) {
             size++;
-            root.colorTowardsParent = color.red;
+            root.colorTowardsParent = color.black;
         }
     }
 
-    private node<T> insertRecur(T x, node<T> tar, boolean[] haveSameNum) {
+    private node fixUp(node tar) {
+        if (isRed(tar.right)) tar = rotateLeft(tar);
+        if (isRed(tar.left) && isRed(tar.left.left)) tar = rotateRight(tar);
+        if (isRed(tar.left) && isRed(tar.right)) flipColor(tar);
+        return tar;
+    }
+    
+    private node insertRecur(T x, node tar, boolean[] haveSameNum) {
         if(tar == null) {
-            return new node<>(x);
+            return new node(x);
         } else if (x.compareTo(tar.a) > 0) {
             tar.right = insertRecur(x, tar.right, haveSameNum);
         } else if (x.compareTo(tar.a) < 0) {
@@ -62,25 +76,18 @@ public class LeftLeaningRBTrees<T extends Comparable<T>> {
             haveSameNum[0] = true;
         }
         /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-        if (isRed(tar.right)) tar = rotateLeft(tar);
-        if (isRed(tar.left) && isRed(tar.left.left)) tar = rotateRight(tar);
-        if (isRed(tar.left) && isRed(tar.right)) flipColor(tar);
-        return tar;
+        return fixUp(tar);
     }
 
-    private boolean isRed(node<T> tar) {
-        if (tar == null) {
-            return false;
-        } else {
-            return tar.colorTowardsParent == color.red;
-        }
+    private boolean isRed(node tar) {
+        return tar != null && tar.colorTowardsParent == color.red;
     }
 
     public boolean get(T x) {
         return getRecur(x, root);
     }
 
-    private boolean getRecur(T x, node<T> tar) {
+    private boolean getRecur(T x, node tar) {
         if (tar == null) {
             return false;
         } else if (x.compareTo(tar.a) > 0) {
@@ -93,64 +100,98 @@ public class LeftLeaningRBTrees<T extends Comparable<T>> {
         return false;
     }
 
-    public boolean remove(T x) {
-        if (removeRecur(x, null, root)) {
-            size--;
-            return true;
+    // Assuming h is red and both h.left and h.left.left are black,
+    // make h.left or one of its children red.
+    private node moveRedLeft(node h) {
+        flipColor(h);
+        //if have a 4node:
+        if (isRed(h.right != null ? h.right.left : null)) {
+            h.right = rotateRight(h.right);
+            h = rotateLeft(h);
+            flipColor(h);
         }
-        return false;
+        return h;
     }
 
-    private boolean removeRecur(T x, node<T> parent, node<T> tar) {
+    // Assuming h is red and both h.right and h.right.left are black,
+    // make h.right or one of its children red.
+    private node moveRedRight(node h) {
+        flipColor(h);
+        //if have a 4node:
+        if (isRed(h.left != null ? h.left.left : null)) {
+            h = rotateRight(h);
+            flipColor(h);
+        }
+        return h;
+    }
 
-        if (tar == null) {
-            return false;
-        } else if (x.compareTo(tar.a) > 0) {
-            return removeRecur(x, tar, tar.right);
-        } else if (x.compareTo(tar.a) < 0) {
-            return removeRecur(x, tar, tar.left);
-        } else if (x.compareTo(tar.a) == 0) {
-            //TODO: root
-            if (tar.left == null && tar.right == null) {
-                if (parent.left == tar) {
-                    parent.left = null;
-                } else {
-                    parent.right = null;
-                }
-            } else if (tar.left != null && tar.right != null) {
-                if (parent.left == tar) {
-                    node<T> parentOfRight = parent.right;
-                    while(parentOfRight.left != null) {
-                        parentOfRight = parentOfRight.left;
-                    }
-                    parent.left = tar.left;
-                    parentOfRight.left = tar.right;
-                } else {
-                    node<T> parentOfLeft = parent.left;
-                    while(parentOfLeft.right != null) {
-                        parentOfLeft = parentOfLeft.right;
-                    }
-                    parent.right = tar.right;
-                    parentOfLeft.right = tar.left;
-                }
-            } else {
-                if (parent.left == tar) {
-                    //TODO: new method induced.
-                    parent.left = Objects.requireNonNullElseGet(tar.left, () -> tar.right);
-                } else {
-                    parent.right = Objects.requireNonNullElseGet(tar.left, () -> tar.right);
-                }
+    public void realRemove(T x) {
+        if (root == null) return;
+        root.colorTowardsParent = color.red;
+        root = realRemove(x, root);
+        if (root != null) root.colorTowardsParent = color.black;
+    }
+
+    private node realRemove(T key, node h) {
+        if (key.compareTo(h.a) < 0) {
+            // Ensure we don't descend into a 2-node on the left
+            if (h.left != null && !isRed(h.left) && !isRed(h.left.left)) {
+                h = moveRedLeft(h);
             }
-            return true;
+            if (h.left != null) h.left = realRemove(key, h.left);
+        } else {
+            // Prepare for deletions on the right side / at h
+            if (isRed(h.left)) {
+                h = rotateRight(h);
+            }
+
+            // If matching key and no right child => delete this node (leaf-ish case)
+            if (key.compareTo(h.a) == 0 && h.right == null) {
+                return null;
+            }
+
+            // Ensure we don't descend into a 2-node on the right
+            if (h.right != null && !isRed(h.right) && !isRed(h.right.left)) {
+                h = moveRedRight(h);
+            }
+
+            if (key.compareTo(h.a) == 0) {
+                // Replace with successor
+                node x = min(h.right);
+                h.a = x.a;
+                // Delete successor from right subtree
+                h.right = deleteMin(h.right);
+            } else {
+                if (h.right != null) h.right = realRemove(key, h.right);
+            }
         }
-        return true;
+
+        return fixUp(h);
     }
 
+    private node min(node h) {
+        while (h.left != null) h = h.left;
+        return h;
+    }
+
+    private node deleteMin(node h) {
+        if (h.left == null) return null;
+        if (!isRed(h.left) && !isRed(h.left.left)) {
+            h = moveRedLeft(h);
+        }
+        h.left = deleteMin(h.left);
+        return fixUp(h);
+    }
+
+
+    public void rm(T x) {
+
+    }
     /// for a left leaned tree, rotate to left means inserted a right leaned red-key.
     /// target is the centre-node to rotate, target.right will become the new parent of tar.
     /// assume that tar.right and tar is not null.
-    private node<T> rotateLeft(node<T> tar) {
-        node<T> bf = tar.right;
+    private node rotateLeft(node tar) {
+        node bf = tar.right;
         color bf1 = bf.colorTowardsParent;
         bf.colorTowardsParent = tar.colorTowardsParent;
         tar.colorTowardsParent = bf1;
@@ -162,8 +203,8 @@ public class LeftLeaningRBTrees<T extends Comparable<T>> {
     /// for a left leaned tree, rotate to right means two continuing left leaned red keys.
     /// target is the parent to rotate, target.left will become the new parent of tar.
     /// assume that tar.left and tar is not null.
-    private node<T> rotateRight(node<T> tar) {
-        node<T> bf = tar.left;
+    private node rotateRight(node tar) {
+        node bf = tar.left;
         color bf1 = bf.colorTowardsParent;
         bf.colorTowardsParent = tar.colorTowardsParent;
         tar.colorTowardsParent = bf1;
@@ -172,9 +213,9 @@ public class LeftLeaningRBTrees<T extends Comparable<T>> {
         return bf;
     }
 
-    private void flipColor(node<T> tar) {
-        tar.left.colorTowardsParent = color.black;
-        tar.right.colorTowardsParent = color.black;
-        tar.colorTowardsParent = color.red;
+    private void flipColor(node tar) {
+        changeColor(tar);
+        changeColor(tar.left);
+        changeColor(tar.right);
     }
 }

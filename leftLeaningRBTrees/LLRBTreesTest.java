@@ -80,7 +80,7 @@ public class LLRBTreesTest {
                     break;
                 case 2:
                     if (!lastNum.empty()){
-                        ll.remove(lastNum.pop());
+                        ll.realRemove(lastNum.pop());
                     }
                     break;
             }
@@ -115,29 +115,82 @@ public class LLRBTreesTest {
     }
 
     /// AI generated
-    private double measureInsert(int n, boolean sorted) {
+    private long measureInsertNs(int n, boolean sorted, long seed) {
         LeftLeaningRBTrees<Integer> t = new LeftLeaningRBTrees<>();
-        Random r = new Random(12345);
+        Random r = new Random(seed);
 
-        // 轻量预热
-        for (int i = 0; i < 2000; i++) t.insert(r.nextInt());
-
-        Stopwatch sw = new Stopwatch();
-        if (sorted) {
-            for (int i = 0; i < n; i++) t.insert(i);
-        } else {
-            for (int i = 0; i < n; i++) t.insert(r.nextInt());
+        // 预热：减少JIT对小样本测量的影响
+        for (int i = 0; i < 5000; i++) {
+            t.insert(r.nextInt());
         }
-        return sw.elapsedTime();
+
+        long start = System.nanoTime();
+        if (sorted) {
+            for (int i = 0; i < n; i++) {
+                t.insert(i);
+            }
+        } else {
+            for (int i = 0; i < n; i++) {
+                t.insert(r.nextInt());
+            }
+        }
+        return System.nanoTime() - start;
     }
+
+    private double mean(long[] values) {
+        double sum = 0.0;
+        for (long value : values) {
+            sum += value;
+        }
+        return sum / values.length;
+    }
+
+    private double stdDev(long[] values, double mean) {
+        if (values.length < 2) {
+            return 0.0;
+        }
+        double sum = 0.0;
+        for (long value : values) {
+            double diff = value - mean;
+            sum += diff * diff;
+        }
+        return Math.sqrt(sum / (values.length - 1));
+    }
+
     @Test
     public void compareRandomVsSorted() {
-        int[] ns = {100, 1000, 10000, 50000};
+        int[] ns = {10000, 50000, 100000, 200000};
+        int rounds = 12;
+
+        double prevRandomMeanNs = -1.0;
+        double prevSortedMeanNs = -1.0;
+
         for (int n : ns) {
-            double tr = measureInsert(n, false);
-            double ts = measureInsert(n, true);
-            System.out.printf("N=%d random=%.6fs(%.3f us/op), sorted=%.6fs(%.3f us/op)%n",
-                    n, tr, tr * 1e6 / n, ts, ts * 1e6 / n);
+            long[] randomNs = new long[rounds];
+            long[] sortedNs = new long[rounds];
+
+            for (int i = 0; i < rounds; i++) {
+                randomNs[i] = measureInsertNs(n, false, 12345L + i);
+                sortedNs[i] = measureInsertNs(n, true, 54321L + i);
+            }
+
+            double randomMeanNs = mean(randomNs);
+            double randomSdNs = stdDev(randomNs, randomMeanNs);
+            double sortedMeanNs = mean(sortedNs);
+            double sortedSdNs = stdDev(sortedNs, sortedMeanNs);
+
+            String randomGrowth = prevRandomMeanNs < 0 ? "-" : String.format("%.2fx", randomMeanNs / prevRandomMeanNs);
+            String sortedGrowth = prevSortedMeanNs < 0 ? "-" : String.format("%.2fx", sortedMeanNs / prevSortedMeanNs);
+
+            System.out.printf(
+                    "N=%d | random=%.3f+-%.3f ms (%.1f ns/op, growth=%s) | sorted=%.3f+-%.3f ms (%.1f ns/op, growth=%s)%n",
+                    n,
+                    randomMeanNs / 1_000_000.0, randomSdNs / 1_000_000.0, randomMeanNs / n, randomGrowth,
+                    sortedMeanNs / 1_000_000.0, sortedSdNs / 1_000_000.0, sortedMeanNs / n, sortedGrowth
+            );
+
+            prevRandomMeanNs = randomMeanNs;
+            prevSortedMeanNs = sortedMeanNs;
         }
     }
 }
