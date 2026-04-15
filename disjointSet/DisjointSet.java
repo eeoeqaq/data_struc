@@ -6,6 +6,7 @@ import java.util.Set;
 /** 并查集算法，计划使用数组存储根和数大小，完成标准的并查集
  * 实现方法一般有：listsOfSets，数组记录所属set编号，数组记录树状链表等
  * 这里采用数组表示树状链表的方法
+ * 目前版本带 weighted 和 path compression (WQUPC)
  * @author eeoe
  * */
 public class DisjointSet {

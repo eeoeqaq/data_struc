@@ -1,10 +1,12 @@
 package priorityQueue;
 
 import java.util.Comparator;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 /**
  * PQ by heap
+ *
  * @author eeoe
  */
 public class PriorityQueue<T extends Comparable<T>> implements PQ<T> {
@@ -15,7 +17,10 @@ public class PriorityQueue<T extends Comparable<T>> implements PQ<T> {
     double minLimit = 1.0 / 10;
     Comparator<T> passedInComparator;
     boolean usingPassedInComparator;
-    /**record data from index 0*/
+
+    /**
+     * record data from index 0
+     */
     public PriorityQueue(Comparator<T> comparator) {
         maxCapa = 50;
         size = 0;
@@ -31,6 +36,20 @@ public class PriorityQueue<T extends Comparable<T>> implements PQ<T> {
         usingPassedInComparator = false;
     }
 
+    /// bottom-up heapification
+    public PriorityQueue(List<T> toHeap) {
+        //TODO
+        size = toHeap.size();
+        maxCapa = Math.max(50, size);
+        repo = (T[]) new Comparable[maxCapa];
+        repo = toHeap.toArray(repo);
+        for (int i = size - 1; i >= 0; i--) {
+            drownDown(i);
+        }
+        checkSize();
+        usingPassedInComparator = false;
+    }
+
     private void checkSize() {
         if (this.size > this.maxCapa * maxLimit) {
             biggerCapa();
@@ -39,6 +58,7 @@ public class PriorityQueue<T extends Comparable<T>> implements PQ<T> {
         }
     }
 
+    /// 增大至原先的二倍
     private void biggerCapa() {
         T[] newRepo = (T[]) new Comparable[2 * maxCapa];
         System.arraycopy(this.repo, 0, newRepo, 0, size);
@@ -46,16 +66,19 @@ public class PriorityQueue<T extends Comparable<T>> implements PQ<T> {
         this.repo = newRepo;
     }
 
+    /// 缩小至原先的三分之二
     private void smallerCapa() {
         T[] newRepo = (T[]) new Comparable[2 * maxCapa / 3];
         System.arraycopy(this.repo, 0, newRepo, 0, size);
-        maxCapa = maxCapa / 2;
+        maxCapa = 2 * maxCapa / 3;
         this.repo = newRepo;
     }
 
-    /**no parents: return -1*/
+    /**
+     * no parents: return -1
+     */
     private int getPar(int i) {
-        if (i == 0){
+        if (i == 0) {
             return -1;
         }
         return (i - 1) / 2;
@@ -101,6 +124,7 @@ public class PriorityQueue<T extends Comparable<T>> implements PQ<T> {
         }
         T tar = repo[0];
         repo[0] = repo[size - 1];
+        repo[size - 1] = null;
         size--;
         drownDown(0);
         return tar;
@@ -112,7 +136,7 @@ public class PriorityQueue<T extends Comparable<T>> implements PQ<T> {
     }
 
     private int switchCompare(T x, T y) {
-        if (usingPassedInComparator){
+        if (usingPassedInComparator) {
             return passedInComparator.compare(x, y);
         } else {
             return x.compareTo(y);
@@ -121,7 +145,7 @@ public class PriorityQueue<T extends Comparable<T>> implements PQ<T> {
 
     private void floatUp(int tar) {
         int parentIndex = getPar(tar);
-        if (parentIndex != -1 && switchCompare(repo[tar], repo[parentIndex]) < 0){
+        if (parentIndex != -1 && switchCompare(repo[tar], repo[parentIndex]) < 0) {
             T bf = repo[tar];
             repo[tar] = repo[parentIndex];
             repo[parentIndex] = bf;
@@ -149,6 +173,13 @@ public class PriorityQueue<T extends Comparable<T>> implements PQ<T> {
             repo[tar] = repo[rightIndex];
             repo[rightIndex] = bf;
             drownDown(rightIndex);
+        }
+    }
+
+    public void toStringline() {
+        for (int i = 0; i < size; i++) {
+            System.out.print(repo[i]);
+            System.out.print(' ');
         }
     }
 }
